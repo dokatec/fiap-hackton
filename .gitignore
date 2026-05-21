@@ -24,29 +24,29 @@ dist-ssr
 *.sw?
 
 # Compiled source 
-/bin/
-/obj/
-/out/
-/publish/
+*.bin/
+*.obj/
+*.out/
+*.publish/
 .dotnet/
 .tools/
 .vs/
 _ReSharper*/
-/secrets.json
-/appsettings.Development.json
+secrets.json
+appsettings.Development.json
 
 # User secrets
-/.env
-/.env.local
-/.env.development.local
-/.env.test.local
-/.env.production.local
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Local development
-/postgres_data/
+postgres_data/
 /.db
 /.db-journal
-/*.sqlite
+*.sqlite
 
 # Logs container
 .docker/
