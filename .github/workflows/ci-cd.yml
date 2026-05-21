@@ -19,15 +19,23 @@ jobs:
         with:
           dotnet-version: 9.x
 
-      # Procura e restaura recursivamente todas as dependências das APIs (.csproj) na raiz do repositório
+      # Restaura explicitamente as dependências de cada microsserviço
       - name: Restaurar Dependências Nuget
-        run: dotnet restore
+        run: |
+          dotnet restore AlertServiceApi/AlertServiceApi.csproj
+          dotnet restore IdentityServiceApi/IdentityServiceApi.csproj
+          dotnet restore IngestionServiceApi/IngestionServiceApi.csproj
+          dotnet restore PropertyServiceApi/PropertyServiceApi.csproj
 
-      # Compila todos os microsserviços C# encontrados na raiz de forma automática
+      # Compila individualmente cada uma das APIs em modo Release
       - name: Compilar Solução (Build)
-        run: dotnet build --no-restore --configuration Release
+        run: |
+          dotnet build AlertServiceApi/AlertServiceApi.csproj --no-restore --configuration Release
+          dotnet build IdentityServiceApi/IdentityServiceApi.csproj --no-restore --configuration Release
+          dotnet build IngestionServiceApi/IngestionServiceApi.csproj --no-restore --configuration Release
+          dotnet build PropertyServiceApi/PropertyServiceApi.csproj --no-restore --configuration Release
 
-      # Executa os testes de unidade se existirem, sem quebrar o pipeline se ainda não tiver projetos de testes criados
+      # Executa os testes de unidade se existirem (com salvaguarda caso não existam no MVP)
       - name: Executar Testes de Unidade
         run: |
           dotnet test --no-build --configuration Release --verbosity normal || echo "Nenhum projeto de testes configurado ou erro ignorado para o MVP."
