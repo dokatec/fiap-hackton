@@ -24,10 +24,10 @@ dist-ssr
 *.sw?
 
 # Compiled source 
-*.bin/
-*.obj/
-*.out/
-*.publish/
+bin/
+obj/
+out/
+publish/
 .dotnet/
 .tools/
 .vs/
