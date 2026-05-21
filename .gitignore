@@ -44,8 +44,8 @@ appsettings.Development.json
 
 # Local development
 postgres_data/
-/.db
-/.db-journal
+.db
+.db-journal
 *.sqlite
 
 # Logs container
