@@ -41,7 +41,7 @@ spec:
               mountPath: /var/lib/postgresql
       volumes:
         - name: postgres-storage
-          emptyDir: {} # Armazenamento temporário local para demonstração rápida do MVP
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -88,7 +88,7 @@ spec:
             - name: KAFKA_PROCESS_ROLES
               value: "broker,controller"
             - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-              value: "1@localhost:9093"
+              value: "1@127.0.0.1:9093"
             - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
               value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
             - name: KAFKA_LISTENERS
@@ -123,6 +123,53 @@ spec:
     app: kafka
 ---
 # ==========================================
+# 2.1. INTERFACE VISUAL DO KAFKA (KAFKA UI)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-ui-deployment
+  namespace: agrosolutions
+  labels:
+    app: kafka-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-ui
+  template:
+    metadata:
+      labels:
+        app: kafka-ui
+    spec:
+      containers:
+        - name: kafka-ui
+          image: provectuslabs/kafka-ui:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KAFKA_CLUSTERS_0_NAME
+              value: "local-k8s"
+            - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
+              value: "kafka-service:9092" # Aponta para o DNS interno do Kafka no cluster
+            - name: DYNAMIC_CONFIG_ENABLED
+              value: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-ui-service
+  namespace: agrosolutions
+spec:
+  type: LoadBalancer # Expõe automaticamente no localhost do seu computador
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: kafka-ui
+---
+# ==========================================
 # 3. MICROSSERVIÇOS BACKEND (.NET 9)
 # ==========================================
 
@@ -135,7 +182,7 @@ metadata:
   labels:
     app: identity-service
 spec:
-  replicas: 2 # Alta Disponibilidade
+  replicas: 2
   selector:
     matchLabels:
       app: identity-service
@@ -159,6 +206,9 @@ spec:
               value: "AgroSolutions"
             - name: Jwt__Audience
               value: "AgroProdutores"
+            # CORREÇÃO: Força o Swagger a ficar visível ativando o modo de Desenvolvimento
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Development"
 ---
 apiVersion: v1
 kind: Service
@@ -166,7 +216,7 @@ metadata:
   name: identity-service
   namespace: agrosolutions
 spec:
-  type: ClusterIP
+  type: LoadBalancer # CORREÇÃO: Expõe a porta 5001 no localhost automaticamente
   ports:
     - port: 5001
       targetPort: 8080
@@ -200,6 +250,9 @@ spec:
           env:
             - name: ConnectionStrings__PropertiesConnection
               value: "Host=postgres-service;Port=5432;Database=agrodatabase;Username=postgres;Password=postgres"
+            # CORREÇÃO: Força o Swagger a ficar visível ativando o modo de Desenvolvimento
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Development"
 ---
 apiVersion: v1
 kind: Service
@@ -207,7 +260,7 @@ metadata:
   name: property-service
   namespace: agrosolutions
 spec:
-  type: ClusterIP
+  type: LoadBalancer # CORREÇÃO: Expõe a porta 5002 no localhost automaticamente
   ports:
     - port: 5002
       targetPort: 8080
@@ -243,6 +296,9 @@ spec:
               value: "Host=postgres-service;Port=5432;Database=agrodatabase;Username=postgres;Password=postgres"
             - name: Kafka__BootstrapServers
               value: "kafka-service:9092"
+            # CORREÇÃO: Força o Swagger a ficar visível ativando o modo de Desenvolvimento
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Development"
 ---
 apiVersion: v1
 kind: Service
@@ -250,14 +306,14 @@ metadata:
   name: ingestion-service
   namespace: agrosolutions
 spec:
-  type: ClusterIP
+  type: LoadBalancer # CORREÇÃO: Expõe a porta 5003 no localhost automaticamente
   ports:
     - port: 5003
       targetPort: 8080
   selector:
     app: ingestion-service
 ---
-# 3.4. Alert Service API (Kafka Consumer Background Worker)
+# 3.4. Alert Service API (Kafka Consumer)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -286,6 +342,9 @@ spec:
               value: "Host=postgres-service;Port=5432;Database=agrodatabase;Username=postgres;Password=postgres"
             - name: Kafka__BootstrapServers
               value: "kafka-service:9092"
+            # CORREÇÃO: Força o Swagger a ficar visível ativando o modo de Desenvolvimento
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Development"
 ---
 apiVersion: v1
 kind: Service
@@ -293,7 +352,7 @@ metadata:
   name: alert-service
   namespace: agrosolutions
 spec:
-  type: ClusterIP
+  type: LoadBalancer # CORREÇÃO: Expõe a porta 5004 no localhost automaticamente
   ports:
     - port: 5004
       targetPort: 8080
@@ -333,10 +392,10 @@ metadata:
   name: frontend-service
   namespace: agrosolutions
 spec:
-  type: NodePort # Exposição externa para acessar localmente no navegador
+  type: NodePort
   ports:
     - port: 80
       targetPort: 80
-      nodePort: 30080 # Exposto na porta 30080 da máquina host do Kubernetes
+      nodePort: 30080
   selector:
     app: frontend
