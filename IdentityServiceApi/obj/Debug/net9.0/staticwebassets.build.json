@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "G5uatUAWugJBbfZBCvMoStMw07ROpZ1EipGMeeHXweI=",
+  "Source": "IdentityServiceApi",
+  "BasePath": "_content/IdentityServiceApi",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}

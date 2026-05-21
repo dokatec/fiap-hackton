@@ -1,0 +1,29 @@
+name: AgroSolutions CI/CD Pipeline
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Código-Fonte
+        uses: actions/checkout@v4
+
+      - name: Configurar o SDK do .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.x
+
+      - name: Restaurar Dependências Nuget
+        run: dotnet restore backend/AgroSolutions.sln
+
+      - name: Compilar Solução (Build)
+        run: dotnet build backend/AgroSolutions.sln --no-restore --configuration Release
+
+      - name: Executar Testes de Unidade
+        run: dotnet test backend/AgroSolutions.sln --no-build --verbosity normal

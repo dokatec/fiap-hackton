@@ -1,0 +1,171 @@
+# Define o nome do grupo de contêineres no Docker Desktop / CLI
+name: agrosolutions
+
+services:
+  # --- Frontend AgroSolutions Pro ---
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: frontend-app
+    ports:
+      - "80:80" # Acessível direto por http://localhost
+    depends_on:
+      - identity-service
+      - property-service
+      - ingestion-service
+      - alert-service
+    networks:
+      - infra-network
+
+  # --- Microsserviços AgroSolutions ---
+
+  identity-service:
+    build:
+      context: ./IdentityServiceApi
+      dockerfile: Dockerfile
+    container_name: identity-service
+    ports:
+      - "5001:8080"
+    environment:
+      # Apontando para o banco unificado: agrodatabase
+      - ConnectionStrings__IdentityConnection=Host=postgres;Port=5432;Database=agrodatabase;Username=postgres;Password=postgres
+      - Jwt__Key=ChaveSecretaMuitoLongaAgroSolutions2024
+      - Jwt__Issuer=AgroSolutions
+      - Jwt__Audience=AgroProdutores
+    networks:
+      - infra-network
+    depends_on:
+      - postgres
+
+  property-service:
+    build:
+      context: ./PropertyServiceApi
+      dockerfile: Dockerfile
+    container_name: property-service
+    ports:
+      - "5002:8080"
+    environment:
+      # Apontando para o banco unificado: agrodatabase
+      - ConnectionStrings__PropertiesConnection=Host=postgres;Port=5432;Database=agrodatabase;Username=postgres;Password=postgres
+    networks:
+      - infra-network
+    depends_on:
+      - postgres
+
+  ingestion-service:
+    build:
+      context: ./IngestionServiceApi
+      dockerfile: Dockerfile
+    container_name: ingestion-service
+    ports:
+      - "5003:8080"
+    environment:
+      # Apontando para o banco unificado: agrodatabase
+      - ConnectionStrings__IngestionConnection=Host=postgres;Port=5432;Database=agrodatabase;Username=postgres;Password=postgres
+      - Kafka__BootstrapServers=kafka:9092
+    networks:
+      - infra-network
+    depends_on:
+      - kafka
+
+  alert-service:
+    build:
+      context: ./AlertServiceApi
+      dockerfile: Dockerfile
+    container_name: alert-service
+    ports:
+      - "5004:8080"
+    environment:
+      # Apontando para o banco unificado: agrodatabase
+      - ConnectionStrings__AlertConnection=Host=postgres;Port=5432;Database=agrodatabase;Username=postgres;Password=postgres
+      - Kafka__BootstrapServers=kafka:9092
+    networks:
+      - infra-network
+    depends_on:
+      - kafka
+
+  # --- Monitoramento ---
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - infra-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - infra-network
+
+  # --- Banco de Dados ---
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=agrodatabase
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - infra-network
+
+  # --- Mensageria ---
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://127.0.0.1:9094"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_LOG_DIRS: "/tmp/kraft-combined-logs"
+    networks:
+      - infra-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    restart: always
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - DYNAMIC_CONFIG_ENABLED=true
+    networks:
+      - infra-network
+
+networks:
+  infra-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

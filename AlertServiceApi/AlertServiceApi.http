@@ -1,0 +1,6 @@
+@AlertServiceApi_HostAddress = http://localhost:5288
+
+GET {{AlertServiceApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "gN9G0gAGZUiRzc0VGUkpIlKT/bIRsaTFB8xhiCg4yiE=",
+  "Source": "AlertServiceApi",
+  "BasePath": "_content/AlertServiceApi",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}
