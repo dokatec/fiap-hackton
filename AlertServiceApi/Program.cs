@@ -11,9 +11,15 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Configuração de Serviços
 builder.Services.AddControllers();
 
-// Configuração do Banco de Dados (PostgreSQL)
-// Em cada API, mude o nome da ConnectionString e do DbContext
-var connectionString = builder.Configuration.GetConnectionString("AlertConnection");
+var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__AlertConnection")
+                       ?? builder.Configuration.GetConnectionString("AlertConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "ERRO CRÍTICO: A Connection String 'AlertConnection' não pôde ser carregada!");
+}
+
 builder.Services.AddDbContext<AlertDbContext>(options =>
     options.UseNpgsql(connectionString));
 

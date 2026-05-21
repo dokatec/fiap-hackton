@@ -10,9 +10,15 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Configuração de Serviços
 builder.Services.AddControllers();
 
-// Configuração do Banco de Dados (PostgreSQL)
-// Em cada API, mude o nome da ConnectionString e do DbContext
-var connectionString = builder.Configuration.GetConnectionString("IdentityConnection");
+var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__IdentityConnection")
+                       ?? builder.Configuration.GetConnectionString("IdentityConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "ERRO CRÍTICO: A Connection String 'IdentityConnection' não pôde ser carregada de nenhuma fonte!");
+}
+
 builder.Services.AddDbContext<IdentityDbContext>(options =>
     options.UseNpgsql(connectionString));
 

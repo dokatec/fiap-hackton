@@ -11,9 +11,15 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Configuração de Serviços
 builder.Services.AddControllers();
 
-// Configuração do Banco de Dados (PostgreSQL)
-// Em cada API, mude o nome da ConnectionString e do DbContext
-var connectionString = builder.Configuration.GetConnectionString("IngestionConnection");
+var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__IngestionConnection")
+                       ?? builder.Configuration.GetConnectionString("IngestionConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "ERRO CRÍTICO: A Connection String 'DefaultConnection' não pôde ser carregada!");
+}
+
 builder.Services.AddDbContext<IngestionDbContext>(options =>
     options.UseNpgsql(connectionString));
 

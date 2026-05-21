@@ -11,11 +11,18 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Configuração de Serviços
 builder.Services.AddControllers();
 
-// Configuração do Banco de Dados (PostgreSQL)
-// Em cada API, mude o nome da ConnectionString e do DbContext
-var connectionString = builder.Configuration.GetConnectionString("PropertiesConnection");
+var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__PropertiesConnection")
+                       ?? builder.Configuration.GetConnectionString("PropertiesConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "ERRO CRÍTICO: A Connection String 'DefaultConnection' não pôde ser carregada!");
+}
+
 builder.Services.AddDbContext<AgroDbContext>(options =>
     options.UseNpgsql(connectionString));
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
