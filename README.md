@@ -68,32 +68,35 @@ docker-compose up -d --build
 
 Uma vez concluído o boot das imagens, os serviços estarão acessíveis nas seguintes portas:
 
-| Aplicação / Serviço | URL de Acesso | Descrição |
-| :--- | :--- | :--- |
-| **Frontend Web** | [http://localhost](http://localhost) | Painel Dinâmico de Monitoramento |
-| **Identity API (Swagger)** | [http://localhost:5001/swagger](http://localhost:5001/swagger) | Endpoint de Registo/Login JWT |
-| **Property API (Swagger)** | [http://localhost:5002/swagger](http://localhost:5002/swagger) | Gestão de Herdades e Talhões |
-| **Ingestion API (Swagger)**| [http://localhost:5003/swagger](http://localhost:5003/swagger) | Simulação de Envio de Sensores |
-| **Alert API (Swagger)** | [http://localhost:5004/swagger](http://localhost:5004/swagger) | Histórico Físico de Alertas |
-| **Kafka UI** | [http://localhost:8080](http://localhost:8080) | Painel visual de tópicos e partições |
-| **Prometheus** | [http://localhost:9090](http://localhost:9090) | Painel de monitorização de métricas |
-| **Grafana** | [http://localhost:3000](http://localhost:3000) | Dashboard de infraestrutura de rede |
+| Aplicação / Serviço         | URL de Acesso                                                  | Descrição                            |
+| :-------------------------- | :------------------------------------------------------------- | :----------------------------------- |
+| **Frontend Web**            | [http://localhost](http://localhost)                           | Painel Dinâmico de Monitoramento     |
+| **Identity API (Swagger)**  | [http://localhost:5001/swagger](http://localhost:5001/swagger) | Endpoint de Registo/Login JWT        |
+| **Property API (Swagger)**  | [http://localhost:5002/swagger](http://localhost:5002/swagger) | Gestão de Herdades e Talhões         |
+| **Ingestion API (Swagger)** | [http://localhost:5003/swagger](http://localhost:5003/swagger) | Simulação de Envio de Sensores       |
+| **Alert API (Swagger)**     | [http://localhost:5004/swagger](http://localhost:5004/swagger) | Histórico Físico de Alertas          |
+| **Kafka UI**                | [http://localhost:8080](http://localhost:8080)                 | Painel visual de tópicos e partições |
+| **Prometheus**              | [http://localhost:9090](http://localhost:9090)                 | Painel de monitorização de métricas  |
+| **Grafana**                 | [http://localhost:3000](http://localhost:3000)                 | Dashboard de infraestrutura de rede  |
 
 ## 🧪 Roteiro de Testes Recomendado (E2E)
 
-Para validar o fluxo de ponta a ponta e surpreender a banca avaliadora, realize os passos abaixo diretamente no navegador:
+Para validar o fluxo de ponta a ponta, realize os passos abaixo diretamente no navegador:
 
 ### Passo 1: Cadastro e Autenticação
+
 1. Aceda ao painel em [http://localhost](http://localhost).
 2. Clique no link para criar um novo cadastro. Registe o seu produtor cooperado.
 3. Faça o login. O sistema gerará o token JWT e dará acesso ao Dashboard principal.
 
 ### Passo 2: Construir o Mapa Agrícola
+
 1. Vá até à aba **Propriedades**.
-2. No formulário do painel esquerdo, adicione uma nova propriedade *(Ex: Herdade do Vale Verde)*.
-3. No painel direito, associe um novo talhão a essa propriedade *(Ex: Setor Sul, Cultura: Soja, Área: 45 hectares)*.
+2. No formulário do painel esquerdo, adicione uma nova propriedade _(Ex: Herdade do Vale Verde)_.
+3. No painel direito, associe um novo talhão a essa propriedade _(Ex: Setor Sul, Cultura: Soja, Área: 45 hectares)_.
 
 ### Passo 3: Simulação de Sensores (Mensageria Kafka)
+
 1. Vá até à aba **Sensores IoT** ou utilize o bloco **Estado Atual dos Campos** no Dashboard principal.
 2. Localize o talhão recém-criado.
 3. Clique no botão de **Simulação Crítica (Seca)** ⚠️.
@@ -113,12 +116,3 @@ O repositório possui uma esteira automatizada de integração contínua baseada
 - Restauro das dependências NuGet de toda a Solução.
 - Build completo em modo Release para verificação de erros de compilação.
 - Execução automatizada da suite de testes unitários do backend.
-
-## 👥 Integrantes do Grupo (8NETT)
-
-- **Jhonatan Pacheco da Silva** - RM / Função técnica
-- *(Adicione aqui os outros integrantes do seu grupo)*
-
----
-
-*Projeto desenvolvido com foco em excelência técnica, resiliência de dados e alta escalabilidade para a FIAP.*
