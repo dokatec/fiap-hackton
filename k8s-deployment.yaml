@@ -1,0 +1,342 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agrosolutions
+---
+# ==========================================
+# 1. PERSISTÊNCIA & BANCO DE DADOS (POSTGRES)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+  namespace: agrosolutions
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              value: "postgres"
+            - name: POSTGRES_DB
+              value: "agrodatabase"
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql
+      volumes:
+        - name: postgres-storage
+          emptyDir: {} # Armazenamento temporário local para demonstração rápida do MVP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: agrosolutions
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: postgres
+---
+# ==========================================
+# 2. MENSAGERIA DISTRIBUÍDA (APACHE KAFKA - KRAFT)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-deployment
+  namespace: agrosolutions
+  labels:
+    app: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+        - name: kafka
+          image: confluentinc/cp-kafka:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9092
+          env:
+            - name: KAFKA_NODE_ID
+              value: "1"
+            - name: KAFKA_PROCESS_ROLES
+              value: "broker,controller"
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: "1@localhost:9093"
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+            - name: KAFKA_LISTENERS
+              value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://kafka-service:9092"
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: "CONTROLLER"
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: "PLAINTEXT"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+              value: "true"
+            - name: CLUSTER_ID
+              value: "MkU3OEVBNTcwNTJENDM2Qk"
+            - name: KAFKA_LOG_DIRS
+              value: "/tmp/kraft-combined-logs"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service
+  namespace: agrosolutions
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9092
+      targetPort: 9092
+      name: broker
+  selector:
+    app: kafka
+---
+# ==========================================
+# 3. MICROSSERVIÇOS BACKEND (.NET 9)
+# ==========================================
+
+# 3.1. Identity Service API
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-service-deployment
+  namespace: agrosolutions
+  labels:
+    app: identity-service
+spec:
+  replicas: 2 # Alta Disponibilidade
+  selector:
+    matchLabels:
+      app: identity-service
+  template:
+    metadata:
+      labels:
+        app: identity-service
+    spec:
+      containers:
+        - name: identity-service
+          image: jhonatanpacheco/agrosolutions-identity:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ConnectionStrings__IdentityConnection
+              value: "Host=postgres-service;Port=5432;Database=agrodatabase;Username=postgres;Password=postgres"
+            - name: Jwt__Key
+              value: "ChaveSecretaMuitoLongaAgroSolutions2024"
+            - name: Jwt__Issuer
+              value: "AgroSolutions"
+            - name: Jwt__Audience
+              value: "AgroProdutores"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity-service
+  namespace: agrosolutions
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5001
+      targetPort: 8080
+  selector:
+    app: identity-service
+---
+# 3.2. Property Service API
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: property-service-deployment
+  namespace: agrosolutions
+  labels:
+    app: property-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: property-service
+  template:
+    metadata:
+      labels:
+        app: property-service
+    spec:
+      containers:
+        - name: property-service
+          image: jhonatanpacheco/agrosolutions-property:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ConnectionStrings__PropertiesConnection
+              value: "Host=postgres-service;Port=5432;Database=agrodatabase;Username=postgres;Password=postgres"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: property-service
+  namespace: agrosolutions
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5002
+      targetPort: 8080
+  selector:
+    app: property-service
+---
+# 3.3. Ingestion Service API (Kafka Producer)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingestion-service-deployment
+  namespace: agrosolutions
+  labels:
+    app: ingestion-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ingestion-service
+  template:
+    metadata:
+      labels:
+        app: ingestion-service
+    spec:
+      containers:
+        - name: ingestion-service
+          image: jhonatanpacheco/agrosolutions-ingestion:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ConnectionStrings__IngestionConnection
+              value: "Host=postgres-service;Port=5432;Database=agrodatabase;Username=postgres;Password=postgres"
+            - name: Kafka__BootstrapServers
+              value: "kafka-service:9092"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingestion-service
+  namespace: agrosolutions
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5003
+      targetPort: 8080
+  selector:
+    app: ingestion-service
+---
+# 3.4. Alert Service API (Kafka Consumer Background Worker)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-service-deployment
+  namespace: agrosolutions
+  labels:
+    app: alert-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alert-service
+  template:
+    metadata:
+      labels:
+        app: alert-service
+    spec:
+      containers:
+        - name: alert-service
+          image: jhonatanpacheco/agrosolutions-alert:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ConnectionStrings__AlertConnection
+              value: "Host=postgres-service;Port=5432;Database=agrodatabase;Username=postgres;Password=postgres"
+            - name: Kafka__BootstrapServers
+              value: "kafka-service:9092"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-service
+  namespace: agrosolutions
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5004
+      targetPort: 8080
+  selector:
+    app: alert-service
+---
+# ==========================================
+# 4. INTERFACE GRÁFICA (FRONTEND SPA REACT)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  namespace: agrosolutions
+  labels:
+    app: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: jhonatanpacheco/agrosolutions-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: agrosolutions
+spec:
+  type: NodePort # Exposição externa para acessar localmente no navegador
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080 # Exposto na porta 30080 da máquina host do Kubernetes
+  selector:
+    app: frontend
