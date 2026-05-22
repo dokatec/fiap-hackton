@@ -1,7 +1,7 @@
 name: agrosolutions
 
 services:
-  # --- Frontend AgroSolutions Pro (React + Nginx) ---
+  # --- Frontend AgroSolutions Pro (React + Nginx) ----
   frontend:
     image: jhonatanpacheco/agrosolutions-frontend:latest
     container_name: frontend-app
